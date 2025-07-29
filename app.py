@@ -4,6 +4,10 @@ import os
 
 app = Flask(__name__)
 
+@app.route("/")
+def home():
+    return "YouTube Transcript API is working!"
+
 @app.route("/check-transcript", methods=["GET"])
 def check_transcript():
     video_id = request.args.get("video_id")
