@@ -1,2 +1,2 @@
 flask
-youtube-transcript-api==0.4.5
+youtube-transcript-api
