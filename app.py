@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+import os  # 환경변수에서 포트를 가져오기 위해 추가
 
 app = Flask(__name__)
 
@@ -18,4 +19,5 @@ def check_transcript():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))  # Railway가 주는 포트를 사용
+    app.run(debug=True, host="0.0.0.0", port=port)
