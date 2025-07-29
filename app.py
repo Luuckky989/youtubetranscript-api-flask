@@ -8,25 +8,6 @@ app = Flask(__name__)
 def home():
     return "YouTube Transcript API is working!"
 
-@app.route("/check-transcript", methods=["GET"])
-def check_transcript():
-    video_id = request.args.get("video_id")
-    if not video_id:
-        return jsonify({"error": "Missing video_id"}), 400
-    
-    try:
-        # 공식 GitHub 문서에 따른 올바른 방법
-        ytt_api = YouTubeTranscriptApi()
-        transcript = ytt_api.fetch(video_id)
-        return jsonify({
-            "has_transcript": True,
-            "transcript_count": len(transcript)
-        })
-    except (TranscriptsDisabled, NoTranscriptFound):
-        return jsonify({"has_transcript": False})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route("/get-transcript", methods=["GET"])
 def get_transcript():
     video_id = request.args.get("video_id")
@@ -36,30 +17,36 @@ def get_transcript():
         return jsonify({"error": "Missing video_id"}), 400
     
     try:
-        # 공식 GitHub 문서 방법
+        # 가장 간단한 방법 - 인스턴스만 생성하고 fetch만 사용
         ytt_api = YouTubeTranscriptApi()
-        transcript_list = ytt_api.list(video_id)
         
-        # 특정 언어 찾기
-        transcript = transcript_list.find_transcript([language])
+        # 언어 지정하여 fetch
+        transcript = ytt_api.fetch(video_id, languages=[language])
         
-        # transcript 데이터 가져오기
-        fetched_transcript = transcript.fetch()
-        
-        # FetchedTranscript를 dict로 변환 (to_raw_data 메서드 사용)
-        transcript_data = fetched_transcript.to_raw_data()
+        # FetchedTranscript 객체를 raw data로 변환
+        if hasattr(transcript, 'to_raw_data'):
+            transcript_data = transcript.to_raw_data()
+        else:
+            # 만약 to_raw_data가 없다면 직접 변환
+            transcript_data = []
+            for snippet in transcript:
+                transcript_data.append({
+                    "text": snippet.text,
+                    "start": snippet.start,
+                    "duration": snippet.duration
+                })
         
         return jsonify({
             "has_transcript": True,
             "transcript": transcript_data,
-            "language": transcript.language,
-            "language_code": transcript.language_code,
-            "is_generated": transcript.is_generated
+            "language": language,
+            "video_id": video_id
         })
+        
     except (TranscriptsDisabled, NoTranscriptFound):
-        return jsonify({"has_transcript": False})
+        return jsonify({"has_transcript": False, "error": "No transcript available"})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "has_transcript": False}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
