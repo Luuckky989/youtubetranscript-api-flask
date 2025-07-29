@@ -15,12 +15,12 @@ def check_transcript():
         return jsonify({"error": "Missing video_id"}), 400
     
     try:
-        # 원래 코드가 맞습니다 - 공식 문서 방식
+        # 공식 문서에 따른 올바른 방법
         ytt_api = YouTubeTranscriptApi()
         transcript = ytt_api.fetch(video_id)
         return jsonify({
             "has_transcript": True,
-            "transcript_count": len(transcript)
+            "transcript_count": len(transcript.snippets)
         })
     except (TranscriptsDisabled, NoTranscriptFound):
         return jsonify({"has_transcript": False})
@@ -30,19 +30,33 @@ def check_transcript():
 @app.route("/get-transcript", methods=["GET"])
 def get_transcript():
     video_id = request.args.get("video_id")
-    language = request.args.get("language", "en")  # 기본값은 영어
+    language = request.args.get("language", "en")
     
     if not video_id:
         return jsonify({"error": "Missing video_id"}), 400
     
     try:
-        # 공식 문서 방식: 인스턴스 생성 후 fetch
+        # 공식 문서 방법: 특정 언어로 transcript 가져오기
         ytt_api = YouTubeTranscriptApi()
-        transcript = ytt_api.fetch(video_id, languages=[language])
+        transcript_list = ytt_api.list(video_id)
+        transcript = transcript_list.find_transcript([language])
+        fetched_transcript = transcript.fetch()
+        
+        # FetchedTranscript 객체를 JSON으로 변환
+        snippets = []
+        for snippet in fetched_transcript.snippets:
+            snippets.append({
+                "text": snippet.text,
+                "start": snippet.start,
+                "duration": snippet.duration
+            })
+        
         return jsonify({
             "has_transcript": True,
-            "transcript": transcript,
-            "language": language
+            "transcript": snippets,
+            "language": fetched_transcript.language,
+            "language_code": fetched_transcript.language_code,
+            "is_generated": fetched_transcript.is_generated
         })
     except (TranscriptsDisabled, NoTranscriptFound):
         return jsonify({"has_transcript": False})
