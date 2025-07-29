@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
-import os  # 환경변수에서 포트를 가져오기 위해 추가
+import os  # Railway 환경에서 포트 가져오기 위해
 
 app = Flask(__name__)
 
@@ -11,6 +11,7 @@ def check_transcript():
         return jsonify({"error": "Missing video_id"}), 400
 
     try:
+        # ✅ youtube-transcript-api 버전 0.4.5 기준
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         return jsonify({"has_transcript": True})
     except (TranscriptsDisabled, NoTranscriptFound):
@@ -19,5 +20,6 @@ def check_transcript():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Railway가 주는 포트를 사용
-    app.run(debug=True, host="0.0.0.0", port=port)
+    # ✅ Railway의 환경변수 PORT 사용, 없으면 5000 기본값
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
