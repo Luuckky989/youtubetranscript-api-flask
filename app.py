@@ -1,27 +1,21 @@
 from flask import Flask, request, jsonify
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api._errors import NoTranscriptFound
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 app = Flask(__name__)
 
-@app.route("/check-transcript", methods=["POST"])
+@app.route("/check-transcript", methods=["GET"])
 def check_transcript():
-    data = request.get_json()
-    video_id = data.get("videoId")
-
+    video_id = request.args.get("video_id")
     if not video_id:
-        return jsonify({"error": "videoId is required"}), 400
+        return jsonify({"error": "Missing video_id"}), 400
 
     try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "ko"])
-        text = " ".join([entry["text"] for entry in transcript])
-        return jsonify({"has_transcript": True, "transcript": text})
-    except NoTranscriptFound:
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        return jsonify({"has_transcript": True})
+    except (TranscriptsDisabled, NoTranscriptFound):
         return jsonify({"has_transcript": False})
-
-@app.route("/")
-def home():
-    return "Transcript API is running"
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)
