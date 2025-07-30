@@ -11,7 +11,7 @@ def home():
 @app.route("/get-transcript", methods=["GET"])
 def get_transcript():
     video_id = request.args.get("video_id")
-    language = request.args.get("language", "en")
+    language = request.args.get("language", "auto")
     
     if not video_id:
         return jsonify({"error": "Missing video_id"}), 400
