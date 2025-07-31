@@ -17,19 +17,33 @@ def get_transcript():
         return jsonify({"error": "Missing video_id"}), 400
     
     try:
-        # 가장 간단한 방법 - 인스턴스만 생성하고 fetch만 사용
         ytt_api = YouTubeTranscriptApi()
         
-        # 언어 지정하여 fetch
-        transcript = ytt_api.fetch(video_id, languages=[language])
+        # TranscriptList 먼저 가져오기
+        transcript_list = ytt_api.list(video_id)
+        
+        if language == "auto":
+            # 자동 언어 감지: 우선순위 언어 리스트로 찾기
+            languages_to_try = ['ko', 'en', 'ja', 'zh', 'zh-CN', 'es', 'fr', 'de']
+            
+            # find_transcript 메서드로 우선순위 언어 찾기
+            transcript = transcript_list.find_transcript(languages_to_try)
+            used_language = transcript.language_code
+        else:
+            # 특정 언어 지정
+            transcript = transcript_list.find_transcript([language])
+            used_language = language
+        
+        # 실제 transcript 데이터 가져오기
+        fetched_transcript = transcript.fetch()
         
         # FetchedTranscript 객체를 raw data로 변환
-        if hasattr(transcript, 'to_raw_data'):
-            transcript_data = transcript.to_raw_data()
+        if hasattr(fetched_transcript, 'to_raw_data'):
+            transcript_data = fetched_transcript.to_raw_data()
         else:
             # 만약 to_raw_data가 없다면 직접 변환
             transcript_data = []
-            for snippet in transcript:
+            for snippet in fetched_transcript:
                 transcript_data.append({
                     "text": snippet.text,
                     "start": snippet.start,
@@ -39,8 +53,11 @@ def get_transcript():
         return jsonify({
             "has_transcript": True,
             "transcript": transcript_data,
-            "language": language,
-            "video_id": video_id
+            "language": used_language,
+            "video_id": video_id,
+            "auto_detected": language == "auto",
+            "is_generated": transcript.is_generated,
+            "is_translatable": transcript.is_translatable
         })
         
     except (TranscriptsDisabled, NoTranscriptFound):
