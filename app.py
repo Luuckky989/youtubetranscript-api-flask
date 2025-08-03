@@ -153,12 +153,11 @@ class ApifyStyleYouTubeAPI:
         self.request_count = 0
         self.success_count = 0
         
-    def get_transcript_with_session_pool(self, video_id, language="auto", max_retries=5):
+    def get_transcript_with_session_pool(self, video_id, language="auto", max_retries=3):
         """Session Pool을 사용한 transcript 추출"""
         
-        # 스마트 딜레이 (하루 500개 기준)
-        delay = max(86400 / 500, 2.0) + random.uniform(1, 3)
-        time.sleep(delay)
+        # 빠른 딜레이 (테스트용)
+        time.sleep(random.uniform(1, 3))
         
         self.request_count += 1
         
@@ -178,9 +177,9 @@ class ApifyStyleYouTubeAPI:
                 
                 print(f"Request #{self.request_count}, Session: {session_id[:12]}..., Attempt: {attempt + 1}")
                 
-                # 추가 딜레이 (재시도시)
+                # 추가 딜레이 (재시도시만)
                 if attempt > 0:
-                    time.sleep(random.uniform(5, 15))
+                    time.sleep(random.uniform(2, 5))
                 
                 # Transcript 목록 가져오기
                 transcript_list = ytt_api.list(video_id)
@@ -258,7 +257,7 @@ class ApifyStyleYouTubeAPI:
                 # IP 차단 시 더 긴 대기
                 if "blocked" in error_msg or "403" in error_msg:
                     if attempt < max_retries - 1:
-                        time.sleep(random.uniform(30, 60))
+                        time.sleep(random.uniform(10, 20))
                         continue
                 
                 # 마지막 시도
@@ -282,7 +281,7 @@ apify_style_api = ApifyStyleYouTubeAPI()
 
 @app.route("/")
 def home():
-    return f"Apify-Style YouTube API | Sessions: {len(apify_style_api.session_pool.sessions)} | Requests: {apify_style_api.request_count} | Success: {apify_style_api.success_count}"
+    return f"Fast Apify-Style YouTube API | Sessions: {len(apify_style_api.session_pool.sessions)} | Requests: {apify_style_api.request_count} | Success: {apify_style_api.success_count}"
 
 @app.route("/get-transcript", methods=["GET"])
 def get_transcript():
@@ -307,7 +306,7 @@ def get_transcript():
             "attempt": result["attempt"],
             "request_count": result["request_count"],
             "success_rate": result["success_rate"],
-            "method": "apify_style_session_pool"
+            "method": "fast_apify_style"
         })
     else:
         status_code = 200 if result.get("skip") else 500
